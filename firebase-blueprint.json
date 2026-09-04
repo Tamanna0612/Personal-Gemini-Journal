@@ -1,0 +1,90 @@
+{
+  "entities": {
+    "journalEntry": {
+      "title": "Journal Entry",
+      "description": "A private journal entry written by the authenticated user with AI mood tracking and reflection insights.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The unique Firebase Authentication UID of the entry author.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the journal entry.",
+          "maxLength": 200,
+          "minLength": 1
+        },
+        "content": {
+          "type": "string",
+          "description": "Full markdown or text body of the journal entry.",
+          "maxLength": 20000,
+          "minLength": 1
+        },
+        "mood": {
+          "type": "string",
+          "description": "The user's self-selected or inferred primary emotional state.",
+          "maxLength": 50
+        },
+        "moodScore": {
+          "type": "integer",
+          "description": "Numeric mood valence score on a scale from 1 (very low) to 10 (exceptionally positive)."
+        },
+        "tags": {
+          "type": "array",
+          "description": "Optional categorizing tags for the journal entry."
+        },
+        "reflectionInsight": {
+          "type": "string",
+          "description": "AI-generated philosophical reflection and empathetic perspective.",
+          "maxLength": 5000
+        },
+        "sentimentAnalysis": {
+          "type": "string",
+          "description": "Brief breakdown of emotional tones identified by Gemini.",
+          "maxLength": 1000
+        },
+        "keyThemes": {
+          "type": "array",
+          "description": "Key conceptual themes identified in the entry."
+        },
+        "emotionalTriggers": {
+          "type": "array",
+          "description": "Specific emotional triggers or stressors identified by Gemini in the entry."
+        },
+        "copingStrategies": {
+          "type": "array",
+          "description": "Personalized evidence-based coping strategies tailored to the entry."
+        },
+        "coverImageUrl": {
+          "type": "string",
+          "description": "Unique mood-inspired cover image data URL or web URL generated for this entry."
+        },
+        "coverImagePrompt": {
+          "type": "string",
+          "description": "The artistic visual prompt used to generate the cover image.",
+          "maxLength": 1000
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the entry was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the entry was last modified."
+        }
+      },
+      "required": ["userId", "title", "content", "mood", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/entries/{entryId}": {
+      "schema": "journalEntry",
+      "description": "Subcollection of journal entries belonging strictly to the user matching {userId}."
+    }
+  }
+}

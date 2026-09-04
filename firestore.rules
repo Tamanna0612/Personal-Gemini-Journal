@@ -1,0 +1,92 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions for security validation
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Validation blueprint for journal entry
+    function isValidJournalEntry(data, userId) {
+      return data.userId is string &&
+        data.userId == request.auth.uid &&
+        data.userId == userId &&
+        data.userId.size() <= 128 &&
+        data.userId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.title is string &&
+        data.title.size() >= 1 &&
+        data.title.size() <= 200 &&
+        data.content is string &&
+        data.content.size() >= 1 &&
+        data.content.size() <= 20000 &&
+        data.mood is string &&
+        data.mood.size() <= 50 &&
+        (!('moodScore' in data) || (data.moodScore is int && data.moodScore >= 1 && data.moodScore <= 10)) &&
+        (!('tags' in data) || (data.tags is list && data.tags.size() <= 10 && (data.tags.size() == 0 || data.tags[0] is string))) &&
+        (!('reflectionInsight' in data) || (data.reflectionInsight is string && data.reflectionInsight.size() <= 5000)) &&
+        (!('sentimentAnalysis' in data) || (data.sentimentAnalysis is string && data.sentimentAnalysis.size() <= 1000)) &&
+        (!('keyThemes' in data) || (data.keyThemes is list && data.keyThemes.size() <= 10 && (data.keyThemes.size() == 0 || data.keyThemes[0] is string))) &&
+        (!('emotionalTriggers' in data) || (data.emotionalTriggers is list && data.emotionalTriggers.size() <= 10 && (data.emotionalTriggers.size() == 0 || data.emotionalTriggers[0] is string))) &&
+        (!('copingStrategies' in data) || (data.copingStrategies is list && data.copingStrategies.size() <= 10 && (data.copingStrategies.size() == 0 || data.copingStrategies[0] is string))) &&
+        (!('coverImageUrl' in data) || (data.coverImageUrl is string && data.coverImageUrl.size() <= 1048576)) &&
+        (!('coverImagePrompt' in data) || (data.coverImagePrompt is string && data.coverImagePrompt.size() <= 1000)) &&
+        (!('followUpPrompt' in data) || (data.followUpPrompt is string && data.followUpPrompt.size() <= 2000)) &&
+        data.createdAt is string &&
+        data.createdAt.size() <= 50 &&
+        data.updatedAt is string &&
+        data.updatedAt.size() <= 50;
+    }
+
+    // Connection validation document
+    match /test/{docId} {
+      allow get: if true;
+    }
+
+    // User Journal Entries subcollection - Strictly isolated per user
+    match /users/{userId}/entries/{entryId} {
+      allow get: if isOwner(userId) && isValidId(userId) && isValidId(entryId);
+      allow list: if isOwner(userId) && isValidId(userId);
+
+      allow create: if isOwner(userId) &&
+        isValidId(userId) &&
+        isValidId(entryId) &&
+        isValidJournalEntry(incoming(), userId) &&
+        incoming().userId == userId &&
+        incoming().userId == request.auth.uid &&
+        incoming().keys().hasAll(['userId', 'title', 'content', 'mood', 'createdAt', 'updatedAt']);
+
+      allow update: if isOwner(userId) &&
+        isValidId(userId) &&
+        isValidId(entryId) &&
+        isValidJournalEntry(incoming(), userId) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt;
+
+      allow delete: if isOwner(userId) &&
+        isValidId(userId) &&
+        isValidId(entryId);
+    }
+  }
+}
